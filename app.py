@@ -68,6 +68,7 @@ def home_page():
 @app.route('/create_all')
 def create_all():
     # TODO create the db
+    db.create_all()
     message = "DB Created! (A SQLite DB File Should Appear In Your Project Folder.  " \
               "Also, if changes are made to the model, running this again should " \
               "add these changes to the db."
@@ -76,6 +77,7 @@ def create_all():
 @app.route('/drop_all')
 def drop_all():
     # TODO drop the db
+    db.drop_all()
     message = "DB Dropped!!"
     return render_template('index.html', message=message)
 
@@ -84,6 +86,15 @@ def add_students():
     # TODO add two students to the DB with the following attributes:
     # name='Joe',email="joe@weber.edu",age=21
     # name='Mary', email="mary@weber.edu", age=22 | Mary's nickname: Maria
+    joe = Student(name='Joe', email='joe@weber.edu', age=21)
+    db.session.add(joe)
+    db.session.commit()
+
+    mary = Student(name='Mary', email='mary@weber.edu', age=22)
+    nickname_1 = StudentNickName(nick_name="Maria")
+    mary.student_nick_names.append(nickname_1)
+    db.session.add(mary)
+    db.session.commit()
 
     message = "Student named Joe and Mary added to DB.  Mary's nickname also added"
     return render_template('index.html', message=message)
@@ -91,12 +102,25 @@ def add_students():
 @app.route('/add_nicknames_to_student')
 def add_nicknames_to_student():
     # TODO associate the nicknames Jojo and Joey to Joe 
+    joe = Student.query.filter(Student.email == 'joe@weber.edu').first()
+    nickname_1 = StudentNickName(nick_name="Jojo")
+    nickname_2 = StudentNickName(nick_name="Joey")
+    joe.student_nick_names.append(nickname_1)
+    joe.student_nick_names.append(nickname_2)
+    db.session.add(joe)
+    db.session.commit()
+
     message = "Two nicknames (Joe and Joey) added to Joe"
     return render_template('index.html', message=message)
 
 @app.route('/update_student')
 def update_student():
     # TODO: change Joe's name to Joseph
+    joe = Student.query.filter(Student.email == 'joe@weber.edu').first()
+    joe.name = "Joseph"
+    db.session.add(joe)
+    db.session.commit()
+
     message = "Student Joe Updated"
     return render_template('index.html', message=message)
 
@@ -104,25 +128,40 @@ def update_student():
 @app.route('/select_student')
 def select_student():
     # TODO: Retrieve the student with the email "joe@weber.edu" and display his name, email and nicknames 
-    message = "Query Results:<br> " 
+    joe = Student.query.filter(Student.email == 'joe@weber.edu').first()
+
+    message = "Query Results:<br> " + str(joe)
     return render_template('index.html', message=message)
 
 @app.route('/select_students')
 def select_students():
     # TODO: Retrieve all the students and display their names, nicknames (and later their enrollments) 
+    students = Student.query.all()
+    students = Student.query.order_by(Student.email.desc())
+    query_results = ""
+    for stud in students:
+        query_results = query_results + str(stud) + "<br>"
 
-    message = "Query Results: <br>" 
+    message = "Query Results: <br>" + query_results 
     return render_template('index.html', message=message)
 
 @app.route('/delete_student')
 def delete_student():
     # TODO: Delete Joe and his associated info from the DB
+    joe = Student.query.filter(Student.email == 'joe@weber.edu').first()
+    db.session.delete(joe)
+    db.session.commit()
     message = "Joe deleted from DB"
     return render_template('index.html', message=message)
 
 @app.route('/add_courses')
 def add_courses():
     # TODO: Add a course named Anthro 1000 and another named English 1100 to the DB
+    course1  = Course(name="Anthro 1000")
+    db.session.add(course1)
+    course2 = Course(name="English 1100")
+    db.session.add(course2)
+
     db.session.commit()
     message = "Two courses added to DB"
     return render_template('index.html', message=message)
@@ -130,7 +169,18 @@ def add_courses():
 @app.route('/enroll_students')
 def enroll_students():
     # TODO: Enroll Joe in Anthro and English.  Enroll Mary in Anthro.
+    anthro = Course.query.filter(Course.name == 'Anthro 1000').first()
+    english = Course.query.filter(Course.name == 'English 1100').first()
+    joe = Student.query.filter(Student.email == 'joe@weber.edu').first()
+    mary = Student.query.filter(Student.email == 'mary@weber.edu').first()
 
+    anthro.students.append(joe)
+    english.students.append(joe)
+    anthro.students.append(mary)
+    db.session.add(anthro)
+    db.session.add(english)
+
+    db.session.commit()
     message = "Joe Enrolled in Anthro and English.  Mary enrolled in Anthro"
     return render_template('index.html', message=message)
 
@@ -138,6 +188,8 @@ def enroll_students():
 @app.route('/show_course_enrollments')
 def show_course_enrollments():
     # TODO: Show the enrollments for Anthro and English
+    anthro = Course.query.filter(Course.name == 'Anthro 1000').first()
+    english = Course.query.filter(Course.name == 'English 1100').first()
 
     message = "Course Enrollments:<br>" + str(anthro) + "<br>" + str(english)
     return render_template('index.html', message=message)
@@ -145,5 +197,9 @@ def show_course_enrollments():
 @app.route('/show_student_enrollments')
 def show_student_enrollments():
     # TODO: Show Joe's enrollments
-    message = "Joe is enrolled in:<br> " 
+    joe = Student.query.filter(Student.email == 'joe@weber.edu').first()
+    courses = ""
+    for course in joe.courses:
+        courses = courses + str(course.name) + ", "
+    message = "Joe is enrolled in:<br> " + courses
     return render_template('index.html', message=message)
